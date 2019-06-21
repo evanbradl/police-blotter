@@ -1,8 +1,6 @@
 import urllib.request
 import ssl
 import pandas as pd
-#import io
-from zipfile import ZipFile
 import matplotlib.pyplot as plt; plt.rcdefaults()
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,6 +9,7 @@ import xlrd
 workbook = xlrd.open_workbook('barproject.xls')
 worksheet = workbook.sheet_by_name('Sheet1')
 
+#Function returns info from iowa city arrest blotter of past 2 months in string from HTML table format
 def getWebPage(url="http://www.iowa-city.org/IcgovApps/Police/ArrestBlotter"):
 
     global requestResult
@@ -26,94 +25,130 @@ def getWebPage(url="http://www.iowa-city.org/IcgovApps/Police/ArrestBlotter"):
     requestResult.close()
     return pageOfResults
 
-words = getWebPage()
-dfs = pd.read_html(words)
-df = dfs[0]
-#print(df)
-length = len(df.loc[:,'Charges'])
-#print(df.loc[:,'Charges'])
-#print(length)
-j = 0
-count = 0
-barDictionary = {}
-while(j < length):
-    #print(df.loc[j,'Charges'])
-    #print(df.loc[j,'Name'])
-    if "In a Bar After 10 pm While Underage" in df.loc[j,'Charges']:
-        count = count + 1
-        #print(df.loc[j,'Charges'] + " " + df.loc[j,'Name']+ " " + df.loc[j,'Location'])
-        if df.loc[j,'Location'] in barDictionary:
-            barDictionary[df.loc[j,'Location']] = barDictionary[df.loc[j,'Location']] + 1
-        else:
-            barDictionary[df.loc[j,'Location']] = 1
-        #print()
-    j = j + 1
+#Function returns dictionary in form key = bar name, value = count of tickets
+def createUnderageDictWeb():
+    words = getWebPage()
+
+    dfs = pd.read_html(words)
+    df = dfs[0]
+
+    length = len(df.loc[:,'Charges'])
+
+    j = 0
+    count = 0
+    barDictionary = {}
+    while(j < length):
+        if "In a Bar After 10 pm While Underage" in df.loc[j,'Charges']:
+            count = count + 1
+            if df.loc[j,'Location'] in barDictionary:
+                barDictionary[df.loc[j,'Location']] = barDictionary[df.loc[j,'Location']] + 1
+            else:
+                barDictionary[df.loc[j,'Location']] = 1
+        j = j + 1
+    return barDictionary
 
 
-def combiningNames(barName):
-    index = 0
+#function takes in string name, if string is included in key function will take delete from dict and return count
+def combiningNames(barName,barDictionary):
+    count = 0
     keysToDelete = []
     for key, value in barDictionary.items():
         if barName in key:
-            index +=  value
+            count +=  value
             keysToDelete.append(key)
     for i in keysToDelete:
         del barDictionary[i]
-    return index 
+    return count 
     
+#function takes in dictionary of bars and combines bars listed with names and bars listed with addresses, returns dictionary with combined values
+def barNameCondensor(barDict):
+    edenVal = combiningNames("EDEN", barDict) + combiningNames("217 IO", barDict)
 
-edenVal = combiningNames("EDEN")
+    martinisVal = combiningNames("MARTINI", barDict) + combiningNames("127 E CO", barDict)
 
-martinisVal = combiningNames("MARTINI")
+    fieldValue = combiningNames("FIELD", barDict) + combiningNames("118 S DU", barDict)
 
-fieldValue = combiningNames("FIELD")
+    summitVal = combiningNames("SUMMIT", barDict) + combiningNames("10 S CL", barDict)
 
-summitVal = combiningNames("SUMMIT") + combiningNames("10 S CLINTON")
+    airlinerVal = combiningNames("AIRLINER", barDict) + combiningNames("22 S CL", barDict)
 
-airlinerVal = combiningNames("AIRLINER")
+    spocoVal = combiningNames("SPORT", barDict) + combiningNames("12 S DU", barDict)
 
-spocoVal = combiningNames("SPORT")
+    unionVal = combiningNames("UNION", barDict) + combiningNames("121 E CO", barDict)
 
-unionVal = combiningNames("UNION")
+    bojamesVal = combiningNames("BO", barDict) + combiningNames("118 E WA", barDict)
+    
+    pintVal = combiningNames("PIN", barDict) + combiningNames("118 S CL", barDict)
+    
+    brotherVal = combiningNames("BRO", barDict) + combiningNames("125 S DU", barDict)
+   
+    dcVal = combiningNames("DC", barDict) + combiningNames("124 S DU", barDict)
+    
+    deadwoodVal = combiningNames("DEAD", barDict) + combiningNames("6 S DU", barDict)
+    
+    bardotVal = combiningNames("BARDOT", barDict) + combiningNames("347 S GI", barDict)
+    
+    vineVal = combiningNames("VINE", barDict) + combiningNames("330 E PR", barDict)
+    
+    studioVal = combiningNames("STUDIO", barDict) + combiningNames("13 S LI", barDict)
+    
+    saloonVal = combiningNames("SALOON", barDict) + combiningNames("112 E CO", barDict)
+    
+    gabeVal = combiningNames("GABE", barDict) + combiningNames("330 E WA", barDict)
+    
+    vanbVal = combiningNames("VAN", barDict) + combiningNames("505 E WA", barDict)
 
-bojamesVal = combiningNames("BO") + combiningNames("118 E WASHINGT")
-
-
-barDictionary["FIELDHOUSE"] = fieldValue
-barDictionary["SUMMIT"] = summitVal
-barDictionary["AIRLINER"] = airlinerVal
-barDictionary["SPOCO"] = spocoVal
-barDictionary["UNION"] = unionVal
-barDictionary["BO JAMES"] = bojamesVal
-barDictionary["EDEN"] = edenVal
-barDictionary["MARTINIS"] = martinisVal
-
-#for item in keysToDelete:
- #   del barDictionary[item]
-  #  print(item)
-
-print(barDictionary)
-
-keyList = []
-valueList = []
-for key, value in barDictionary.items():
-    keyList.append(key)
-    valueList.append(value)
+    barDict["FIELDHOUSE"] = fieldValue
+    barDict["SUMMIT"] = summitVal
+    barDict["AIRLINER"] = airlinerVal
+    barDict["SPOCO"] = spocoVal
+    barDict["UNION"] = unionVal
+    barDict["BO JAMES"] = bojamesVal
+    barDict["EDEN"] = edenVal
+    barDict["MARTINIS"] = martinisVal
+    barDict["PINTS"] = pintVal
+    barDict["BROTHERS"] = brotherVal
+    barDict["DC's"] = dcVal
+    barDict["DEADWOOD"] = deadwoodVal
+    barDict["BARDOT"] = bardotVal
+    barDict["THE VINE"] = vineVal
+    barDict["STUDIO 13"] = studioVal
+    barDict["SALOON"] = saloonVal
+    barDict["GABE'S"] = gabeVal
+    barDict["VAN B'S"] = vanbVal
+    
+    return barDict
 
 
 
 
+#puts data from web blotter into bar graph and prints to console
+def graphWebData():
+    
+    barDictionary = createUnderageDictWeb()
+    condensedDict = barNameCondensor(barDictionary)
+
+    print(condensedDict)
+    
+    keyList = []
+    valueList = []
+    for key, value in condensedDict.items():
+        if not(value == 0): #doesn't include items with no tickets in graph
+            keyList.append(key)
+            valueList.append(value)
+
+    y_pos = np.arange(len(keyList))
+
+    plt.barh(y_pos, valueList, align='center', alpha=0.5)
+    plt.yticks(y_pos, keyList)
+    plt.xlabel('Tickets')
+    plt.title('Tickets given in IC bars past 2 months') #still need to use get date fct. and take 2 months off to display dates
+
+    plt.show()
 
 
-y_pos = np.arange(len(keyList))
 
-plt.barh(y_pos, valueList, align='center', alpha=0.5)
-plt.yticks(y_pos, keyList)
-plt.xlabel('Hits')
-plt.title('Tickets given in IC bars past 2 months')
-
-plt.show()
-
+'''
 barDict2 = {}
 rowIndex = 2
 columnIndex = 4
@@ -122,7 +157,7 @@ while(not(worksheet.cell(rowIndex, 0).value == 1)):
     if(worksheet.cell(rowIndex, columnIndex).value == 'UNDER 21 IN BAR AFTER 10 PM'):
         if worksheet.cell(rowIndex, columnIndex-1).value in barDict2:
             barDict2[worksheet.cell(rowIndex, columnIndex-1).value] = barDict2[worksheet.cell(rowIndex, columnIndex-1).value] + 1
-            print(worksheet.cell(rowIndex, columnIndex).value)
+            #print(worksheet.cell(rowIndex, columnIndex).value)
         else:
             barDict2[worksheet.cell(rowIndex, columnIndex-1).value] = 1
             
@@ -172,7 +207,7 @@ barDictionary["BO JAMES"] = bojamesVal
 barDictionary["EDEN"] = edenVal
 barDictionary["MARTINIS"] = martinisVal
 barDictionary["DC'S"] = dcVal
-
+'''
 
 #print(dfs[0])
 #print(words)
