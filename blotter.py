@@ -62,11 +62,11 @@ def combiningNames(barName,barDictionary):
     
 #function takes in dictionary of bars and combines bars listed with names and bars listed with addresses, returns dictionary with combined values
 def barNameCondensor(barDict):
-    edenVal = combiningNames("EDEN", barDict) + combiningNames("217 IO", barDict)
+    edenVal = combiningNames("EDEN", barDict) + combiningNames("217 IO", barDict) + combiningNames("217 E IO", barDict)
 
-    martinisVal = combiningNames("MARTINI", barDict) + combiningNames("127 E CO", barDict)
+    martinisVal = combiningNames("MARTINI", barDict) + combiningNames("127 E CO", barDict) + combiningNames("127E CO", barDict)
 
-    fieldValue = combiningNames("FIELD", barDict) + combiningNames("118 S DU", barDict)
+    fieldValue = combiningNames("FIELD", barDict) + combiningNames("118 S DU", barDict) + combiningNames("22 C CL",barDict)
 
     summitVal = combiningNames("SUMMIT", barDict) + combiningNames("10 S CL", barDict)
 
@@ -82,7 +82,7 @@ def barNameCondensor(barDict):
     
     brotherVal = combiningNames("BRO", barDict) + combiningNames("125 S DU", barDict)
    
-    dcVal = combiningNames("DC", barDict) + combiningNames("124 S DU", barDict)
+    dcVal = combiningNames("DC", barDict) + combiningNames("124 S DU", barDict) + combiningNames("124S DU", barDict) + combiningNames("124 D DU", barDict)
     
     deadwoodVal = combiningNames("DEAD", barDict) + combiningNames("6 S DU", barDict)
     
@@ -97,6 +97,8 @@ def barNameCondensor(barDict):
     gabeVal = combiningNames("GABE", barDict) + combiningNames("330 E WA", barDict)
     
     vanbVal = combiningNames("VAN", barDict) + combiningNames("505 E WA", barDict)
+
+    bluemooseVal = combiningNames("BLUE", barDict) + combiningNames("211 IO", barDict)
 
     barDict["FIELDHOUSE"] = fieldValue
     barDict["SUMMIT"] = summitVal
@@ -116,9 +118,19 @@ def barNameCondensor(barDict):
     barDict["SALOON"] = saloonVal
     barDict["GABE'S"] = gabeVal
     barDict["VAN B'S"] = vanbVal
+    barDict["BLUE MOOSE"] = bluemooseVal
     
     return barDict
 
+#function takes in barDict (key = barName value = num of tickets) and returns 2 lists to be graphed
+def toList(barDict):
+    keyList = []
+    valueList = []
+    for key, value in barDict.items():
+        if not(value == 0): #doesn't include items with no tickets in graph
+            keyList.append(key)
+            valueList.append(value)
+    return keyList, valueList
 
 
 
@@ -130,12 +142,7 @@ def graphWebData():
 
     print(condensedDict)
     
-    keyList = []
-    valueList = []
-    for key, value in condensedDict.items():
-        if not(value == 0): #doesn't include items with no tickets in graph
-            keyList.append(key)
-            valueList.append(value)
+    keyList, valueList = toList(condensedDict)
 
     y_pos = np.arange(len(keyList))
 
@@ -148,7 +155,7 @@ def graphWebData():
 
 
 
-'''
+
 barDict2 = {}
 rowIndex = 2
 columnIndex = 4
@@ -166,7 +173,20 @@ while(not(worksheet.cell(rowIndex, 0).value == 1)):
     rowIndex = rowIndex + 1
     
 print(barDict2)
+condensed = barNameCondensor(barDict2)
+print(condensed)
 print(totalTix)
+keyList, valueList = toList(condensed)
+
+y_pos = np.arange(len(keyList))
+
+plt.barh(y_pos, valueList, align='center', alpha=0.5)
+plt.yticks(y_pos, keyList)
+plt.xlabel('Tickets')
+plt.title('Tickets given in IC bars past 5 years') #still need to use get date fct. and take 2 months off to display dates
+
+plt.show()
+'''
 def combiningNamesAgain(barName):
     index = 0
     keysToDelete = []
@@ -209,8 +229,3 @@ barDictionary["MARTINIS"] = martinisVal
 barDictionary["DC'S"] = dcVal
 '''
 
-#print(dfs[0])
-#print(words)
-#print(type(words))
-#from BeautifulSoup import BeautifulSoup, Comment
-#pd.read_html('http://www.iowa-city.org/IcgovApps/Police/ArrestBlotter)', header=0)[1]
