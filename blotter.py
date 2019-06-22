@@ -6,8 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import xlrd
 
-workbook = xlrd.open_workbook('barproject.xls')
-worksheet = workbook.sheet_by_name('Sheet1')
+
 
 #Function returns info from iowa city arrest blotter of past 2 months in string from HTML table format
 def getWebPage(url="http://www.iowa-city.org/IcgovApps/Police/ArrestBlotter"):
@@ -126,10 +125,15 @@ def barNameCondensor(barDict):
 def toList(barDict):
     keyList = []
     valueList = []
+    otherCount = 0 #counter for items that didn't fall into other bar name category
     for key, value in barDict.items():
-        if not(value == 0): #doesn't include items with no tickets in graph
+        if not(value == 0) and len(key) < 11: #doesn't include items with no tickets in graph
             keyList.append(key)
             valueList.append(value)
+        elif len(key) > 10:
+            otherCount += 1
+    keyList.append("DNE/ OTHER")
+    valueList.append(otherCount) #adding other count value to be graphed
     return keyList, valueList
 
 
@@ -154,38 +158,39 @@ def graphWebData():
     plt.show()
 
 
-
-
-barDict2 = {}
-rowIndex = 2
-columnIndex = 4
-totalTix = 0
-while(not(worksheet.cell(rowIndex, 0).value == 1)):
-    if(worksheet.cell(rowIndex, columnIndex).value == 'UNDER 21 IN BAR AFTER 10 PM'):
-        if worksheet.cell(rowIndex, columnIndex-1).value in barDict2:
-            barDict2[worksheet.cell(rowIndex, columnIndex-1).value] = barDict2[worksheet.cell(rowIndex, columnIndex-1).value] + 1
+#function returns dictionary from barproject.xls in form key = bar name, value = count of tickets
+def barDictFromExcel():
+    workbook = xlrd.open_workbook('barproject.xls')
+    worksheet = workbook.sheet_by_name('Sheet1')
+    barDict2 = {}
+    rowIndex = 2
+    columnIndex = 4
+    totalTix = 0
+    while(not(worksheet.cell(rowIndex, 0).value == 1)):
+        if(worksheet.cell(rowIndex, columnIndex).value == 'UNDER 21 IN BAR AFTER 10 PM'):
+            if worksheet.cell(rowIndex, columnIndex-1).value in barDict2:
+                barDict2[worksheet.cell(rowIndex, columnIndex-1).value] = barDict2[worksheet.cell(rowIndex, columnIndex-1).value] + 1
             #print(worksheet.cell(rowIndex, columnIndex).value)
-        else:
-            barDict2[worksheet.cell(rowIndex, columnIndex-1).value] = 1
+            else:
+                barDict2[worksheet.cell(rowIndex, columnIndex-1).value] = 1
             
-        totalTix = totalTix + 1
+            totalTix = totalTix + 1
             
-    rowIndex = rowIndex + 1
+            rowIndex = rowIndex + 1
     
-print(barDict2)
-condensed = barNameCondensor(barDict2)
-print(condensed)
-print(totalTix)
-keyList, valueList = toList(condensed)
+    condensed = barNameCondensor(barDict2)
+    return condensed
+def graphExcelData():
+    keyList, valueList = toList(condensed)
 
-y_pos = np.arange(len(keyList))
+    y_pos = np.arange(len(keyList))
 
-plt.barh(y_pos, valueList, align='center', alpha=0.5)
-plt.yticks(y_pos, keyList)
-plt.xlabel('Tickets')
-plt.title('Tickets given in IC bars past 5 years') #still need to use get date fct. and take 2 months off to display dates
+    plt.barh(y_pos, valueList, align='center', alpha=0.5)
+    plt.yticks(y_pos, keyList)
+    plt.xlabel('Tickets')
+    plt.title('Tickets given in IC bars past 5 years') #still need to use get date fct. and take 2 months off to display dates
 
-plt.show()
+    plt.show()
 '''
 def combiningNamesAgain(barName):
     index = 0
