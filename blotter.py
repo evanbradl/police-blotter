@@ -121,19 +121,37 @@ def barNameCondensor(barDict):
     
     return barDict
 
-#function takes in barDict (key = barName value = num of tickets) and returns 2 lists to be graphed
+#function takes in barDict (key = barName value = num of tickets) and returns 2 lists to be graphed in ascending order
 def toList(barDict):
     keyList = []
     valueList = []
-    otherCount = 0 #counter for items that didn't fall into other bar name category
+    toDelete = []
+    
+    #otherCount = 0 #counter for items that didn't fall into other bar name category
+    correctionVal = 0 # counter for where to start list after unecessary vals are removed
+    #correctionKey = 0
     for key, value in barDict.items():
-        if not(value == 0) and len(key) < 11: #doesn't include items with no tickets in graph
-            keyList.append(key)
-            valueList.append(value)
-        elif len(key) > 10:
-            otherCount += 1
-    keyList.append("DNE/ OTHER")
-    valueList.append(otherCount) #adding other count value to be graphed
+        if len(key) < 11: #doesn't include items where address didn't correlate with bar name
+     #    keyList.append(key)
+         valueList.append(value)
+        #elif len(key) > 10:
+         #   otherCount += 1
+    #keyList.append("DNE/ OTHER")
+    #valueList.append(otherCount) #adding other count value to be graphed
+    valueList.sort(reverse = True)
+    keyList = sorted(barDict, key=barDict.get, reverse=True)
+    for item in keyList:
+        if len(item) > 10:
+            toDelete.append(item)
+    for item in toDelete:
+        keyList.remove(item)
+    for x in valueList:
+        if x < 1:
+            correctionVal += 1
+    correctionVal = len(valueList) - correctionVal
+    keyList = keyList[:correctionVal]
+    valueList = valueList[:correctionVal] #removes keys and vals where val was 0
+        
     return keyList, valueList
 
 
@@ -176,11 +194,15 @@ def barDictFromExcel():
             
             totalTix = totalTix + 1
             
-            rowIndex = rowIndex + 1
+        rowIndex = rowIndex + 1
     
     condensed = barNameCondensor(barDict2)
     return condensed
+
+
 def graphExcelData():
+    condensed = barDictFromExcel()
+    
     keyList, valueList = toList(condensed)
 
     y_pos = np.arange(len(keyList))
@@ -188,9 +210,11 @@ def graphExcelData():
     plt.barh(y_pos, valueList, align='center', alpha=0.5)
     plt.yticks(y_pos, keyList)
     plt.xlabel('Tickets')
-    plt.title('Tickets given in IC bars past 5 years') #still need to use get date fct. and take 2 months off to display dates
+    plt.title('Tickets given in IC bars 1/1/14-5/6/19') #still need to use get date fct. and take 2 months off to display dates
 
     plt.show()
+    
+    
 '''
 def combiningNamesAgain(barName):
     index = 0
