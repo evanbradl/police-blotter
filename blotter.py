@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt; plt.rcdefaults()
 import numpy as np
 import matplotlib.pyplot as plt
 import xlrd
+from datetime import datetime
 
 
 
@@ -162,7 +163,7 @@ def graphWebData():
     barDictionary = createUnderageDictWeb()
     condensedDict = barNameCondensor(barDictionary)
 
-    print(condensedDict)
+    #print(condensedDict)
     
     keyList, valueList = toList(condensedDict)
 
@@ -186,6 +187,7 @@ def barDictFromExcel():
     totalTix = 0
     while(not(worksheet.cell(rowIndex, 0).value == 1)):
         if(worksheet.cell(rowIndex, columnIndex).value == 'UNDER 21 IN BAR AFTER 10 PM'):
+            #print(datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndex, 0).value, workbook.datemode)))
             if worksheet.cell(rowIndex, columnIndex-1).value in barDict2:
                 barDict2[worksheet.cell(rowIndex, columnIndex-1).value] = barDict2[worksheet.cell(rowIndex, columnIndex-1).value] + 1
             #print(worksheet.cell(rowIndex, columnIndex).value)
@@ -214,7 +216,79 @@ def graphExcelData():
 
     plt.show()
     
+    #creates dictionary of bar based on dates entered in string for etc. (jun 6 2014, jul 6 2014)
+def createDictFromDate(begin, end):
+    beginDate = datetime.strptime(begin, '%b %d %Y')
+    endDate = datetime.strptime(end, '%b %d %Y')
     
+    if(beginDate > endDate):
+        print("Begin date was after end date")
+        words = getWebPage()
+    elif(beginDate < datetime.strptime("jan 1 2014", '%b %d %Y')):
+        print("data only goes exists after 2014")
+
+    words = getWebPage()
+
+    dfs = pd.read_html(words)
+    df = dfs[0]
+
+    length = len(df.loc[:,'Charges'])
+
+    j = 0
+    count = 0
+    barDictionary = {}
+    
+    workbook = xlrd.open_workbook('barproject.xls')
+    worksheet = workbook.sheet_by_name('Sheet1')
+
+    rowIndex = 2
+    columnIndex = 4
+    
+    while(not(worksheet.cell(rowIndex, 0).value == 1)):
+        if(worksheet.cell(rowIndex, columnIndex).value == 'UNDER 21 IN BAR AFTER 10 PM'):
+            currentDate = (datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndex, 0).value, workbook.datemode)))
+            if(currentDate >= beginDate and currentDate <= endDate):
+                if worksheet.cell(rowIndex, columnIndex-1).value in barDictionary:
+                    barDictionary[worksheet.cell(rowIndex, columnIndex-1).value] = barDictionary[worksheet.cell(rowIndex, columnIndex-1).value] + 1
+                
+                else:
+                    barDictionary[worksheet.cell(rowIndex, columnIndex-1).value] = 1
+                
+        rowIndex = rowIndex + 1
+    
+    while(j < length):
+        if "In a Bar After 10 pm While Underage" in df.loc[j,'Charges']:
+            
+            currentDate = datetime.strptime((df.loc[j,'Offense Date']),"%m/%d/%Y %H:%M:%S %p")
+
+            if(currentDate >= beginDate and currentDate <= endDate and currentDate > datetime.strptime('5/6/2019', "%m/%d/%Y")):
+                count = count + 1
+                
+                if df.loc[j,'Location'] in barDictionary:
+                    barDictionary[df.loc[j,'Location']] = barDictionary[df.loc[j,'Location']] + 1
+                else:
+                    barDictionary[df.loc[j,'Location']] = 1
+        j = j + 1
+    return barDictionary
+    
+#creates bar graphs of bar based on dates entered in string for etc. (jun 6 2014, jul 6 2014)
+def graphWebDataFromDate(begin, end):
+    
+    barDictionary = createDictFromDate(begin, end)
+    condensedDict = barNameCondensor(barDictionary)
+
+    #print(condensedDict)
+    
+    keyList, valueList = toList(condensedDict)
+
+    y_pos = np.arange(len(keyList))
+
+    plt.barh(y_pos, valueList, align='center', alpha=0.5)
+    plt.yticks(y_pos, keyList)
+    plt.xlabel('Tickets')
+    plt.title('Tickets given in IC bars from ' + begin + ' to ' + end) #still need to use get date fct. and take 2 months off to display dates
+
+    plt.show()
 '''
 def combiningNamesAgain(barName):
     index = 0
