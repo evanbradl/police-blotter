@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt; plt.rcdefaults()
 import numpy as np
 import matplotlib.pyplot as plt
 import xlrd
-from datetime import datetime, date
+from datetime import datetime
 from datetime import timedelta
 
 
@@ -248,7 +248,7 @@ def createDictFromDate(begin, end):
     while(not(worksheet.cell(rowIndex, 0).value == 1)):
         if(worksheet.cell(rowIndex, columnIndex).value == 'UNDER 21 IN BAR AFTER 10 PM'):
             currentDate = (datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndex, 0).value, workbook.datemode)))
-            print(currentDate.strftime('%p'))
+            #print(currentDate.strftime('%p'))
             if(currentDate >= beginDate and currentDate <= endDate):
                 if worksheet.cell(rowIndex, columnIndex-1).value in barDictionary:
                     barDictionary[worksheet.cell(rowIndex, columnIndex-1).value] = barDictionary[worksheet.cell(rowIndex, columnIndex-1).value] + 1
@@ -257,7 +257,7 @@ def createDictFromDate(begin, end):
                     barDictionary[worksheet.cell(rowIndex, columnIndex-1).value] = 1
                 
         rowIndex = rowIndex + 1
-    print("excel done")
+    #print("excel done")
     while(j < length):
         if "In a Bar After 10 pm While Underage" in df.loc[j,'Charges']:
             
@@ -277,6 +277,87 @@ def createDictFromDate(begin, end):
 def createDictFromTime(begin, end):
     beginTime = datetime.strptime(begin, '%I:%M %p')
     endTime = datetime.strptime(end, '%I:%M %p')
+    #beginTime = beginTime.time()
+    #endTime = endTime.time()
+    #tdelta = datetime.combine(date.today(), endTime) - datetime.combine(date.today(), beginTime)
+    tdelta = endTime - beginTime
+    if tdelta.days != 0:
+        tdelta = timedelta(days=0, seconds=tdelta.seconds, microseconds=tdelta.microseconds)
+    #print(tdelta)
+    words = getWebPage()
+
+    dfs = pd.read_html(words)
+    df = dfs[0]
+
+    length = len(df.loc[:,'Charges'])
+
+    j = 0
+    count = 0
+    barDictionary = {}
+    
+    workbook = xlrd.open_workbook('barproject.xls')
+    worksheet = workbook.sheet_by_name('Sheet1')
+
+    rowIndex = 2
+    columnIndex = 4
+    
+    while(not(worksheet.cell(rowIndex, 0).value == 1)):
+        if(worksheet.cell(rowIndex, columnIndex).value == 'UNDER 21 IN BAR AFTER 10 PM'):
+            currentDate = (datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndex, 0).value, workbook.datemode)))
+            #currentTime = currentDate.time()
+           # print(currentTime)
+            currenttdelta = currentDate - beginTime
+            #print("begin time:", beginTime)
+            #print("current date:", currentDate)
+            #print("delta:",currenttdelta)
+            if currenttdelta.days != 0:
+                currenttdelta = timedelta(days=0, seconds=currenttdelta.seconds, microseconds=currenttdelta.microseconds)
+            #print("fixed delta:", currenttdelta)
+            if(currenttdelta <= tdelta):
+                
+                if worksheet.cell(rowIndex, columnIndex-1).value in barDictionary:
+                    barDictionary[worksheet.cell(rowIndex, columnIndex-1).value] = barDictionary[worksheet.cell(rowIndex, columnIndex-1).value] + 1
+                
+                else:
+                    barDictionary[worksheet.cell(rowIndex, columnIndex-1).value] = 1
+               # print(currentTime)
+                
+        rowIndex = rowIndex + 1
+    #print("excel done")
+    while(j < length):
+        if "In a Bar After 10 pm While Underage" in df.loc[j,'Charges']:
+            
+            currentDate = datetime.strptime((df.loc[j,'Offense Date']),"%m/%d/%Y %H:%M:%S %p")
+            #currentTime = currentDate.time()
+            currenttdelta = currentDate - beginTime
+            #print("begin time:", beginTime)
+            #print("current date:", currentDate)
+            #print("delta:",currenttdelta)
+            if currenttdelta.days != 0:
+                currenttdelta = timedelta(days=0, seconds=currenttdelta.seconds, microseconds=currenttdelta.microseconds)
+            if(currenttdelta <= tdelta and currentDate > datetime.strptime('5/6/2019', "%m/%d/%Y")):
+                count = count + 1
+              #  print(currentTime)
+                if df.loc[j,'Location'] in barDictionary:
+                    barDictionary[df.loc[j,'Location']] = barDictionary[df.loc[j,'Location']] + 1
+                else:
+                    barDictionary[df.loc[j,'Location']] = 1
+        j = j + 1
+    return barDictionary
+    
+#creates dictionary of bar based on times and dates entered in string for ex. (10:05 PM, 1:00 AM, jun 5 2016, jul 6 2017) this is 10:05pm to midnight. data only exists from 10:00pm-5:00am
+def createDictFromDateandTime(startDate,endDate,begin, end):
+    beginTime = datetime.strptime(begin, '%I:%M %p')
+    endTime = datetime.strptime(end, '%I:%M %p')
+    
+    beginDate = datetime.strptime(startDate, '%b %d %Y')
+    endDate = datetime.strptime(endDate, '%b %d %Y')
+    
+    if(beginDate > endDate):
+        print("Begin date was after end date")
+        words = getWebPage()
+    elif(beginDate < datetime.strptime("jan 1 2014", '%b %d %Y')):
+        print("data only goes exists after 2014")
     #beginTime = beginTime.time()
     #endTime = endTime.time()
     #tdelta = datetime.combine(date.today(), endTime) - datetime.combine(date.today(), beginTime)
@@ -304,7 +385,7 @@ def createDictFromTime(begin, end):
     while(not(worksheet.cell(rowIndex, 0).value == 1)):
         if(worksheet.cell(rowIndex, columnIndex).value == 'UNDER 21 IN BAR AFTER 10 PM'):
             currentDate = (datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndex, 0).value, workbook.datemode)))
-            currentTime = currentDate.time()
+            #currentTime = currentDate.time()
            # print(currentTime)
             currenttdelta = currentDate - beginTime
             #print("begin time:", beginTime)
@@ -313,7 +394,7 @@ def createDictFromTime(begin, end):
             if currenttdelta.days != 0:
                 currenttdelta = timedelta(days=0, seconds=currenttdelta.seconds, microseconds=currenttdelta.microseconds)
             #print("fixed delta:", currenttdelta)
-            if(currenttdelta <= tdelta):
+            if(currenttdelta <= tdelta) and (currentDate >= beginDate and currentDate <= endDate):
                 
                 if worksheet.cell(rowIndex, columnIndex-1).value in barDictionary:
                     barDictionary[worksheet.cell(rowIndex, columnIndex-1).value] = barDictionary[worksheet.cell(rowIndex, columnIndex-1).value] + 1
@@ -328,14 +409,14 @@ def createDictFromTime(begin, end):
         if "In a Bar After 10 pm While Underage" in df.loc[j,'Charges']:
             
             currentDate = datetime.strptime((df.loc[j,'Offense Date']),"%m/%d/%Y %H:%M:%S %p")
-            currentTime = currentDate.time()
+            #currentTime = currentDate.time()
             currenttdelta = currentDate - beginTime
             #print("begin time:", beginTime)
             #print("current date:", currentDate)
             #print("delta:",currenttdelta)
             if currenttdelta.days != 0:
                 currenttdelta = timedelta(days=0, seconds=currenttdelta.seconds, microseconds=currenttdelta.microseconds)
-            if(currenttdelta <= tdelta and currentDate > datetime.strptime('5/6/2019', "%m/%d/%Y")):
+            if(currenttdelta <= tdelta and currentDate >= beginDate and currentDate <= endDate and currentDate > datetime.strptime('5/6/2019', "%m/%d/%Y")):
                 count = count + 1
               #  print(currentTime)
                 if df.loc[j,'Location'] in barDictionary:
@@ -345,6 +426,8 @@ def createDictFromTime(begin, end):
         j = j + 1
     return barDictionary
     
+
+
 #creates bar graphs of bar based on dates entered in string for ex. (jun 6 2014, jul 6 2014)
 #!!!!! ONLY ACCURATE UNTIL JULY 6th 2019!!!!!!
 def graphDataFromDate(begin, end):
@@ -380,46 +463,21 @@ def graphDataFromTime(begin, end):
     plt.title('Tickets given in IC bars from ' + begin + ' to ' + end) #still need to use get date fct. and take 2 months off to display dates
 
     plt.show()
-'''
-def combiningNamesAgain(barName):
-    index = 0
-    keysToDelete = []
-    for key, value in barDict2.items():
-        if barName in key:
-            index +=  value
-            keysToDelete.append(key)
-    for i in keysToDelete:
-        del barDict2[i]
-    return index 
+    
+    #!!!!! ONLY ACCURATE UNTIL JULY 6th 2019!!!!!!
+def graphDataFromDateandTime(startDate, endDate, begin, end):
+    barDictionary = createDictFromDateandTime(startDate, endDate, begin, end)
+    condensedDict = barNameCondensor(barDictionary)
+    
+    keyList, valueList = toList(condensedDict)
+    
+    y_pos = np.arange(len(keyList))
 
-#google address and do it that way
-summitVal = combiningNamesAgain('10 S CLINTON ST')
+    plt.barh(y_pos, valueList, align='center', alpha=0.5)
+    plt.yticks(y_pos, keyList)
+    plt.xlabel('Tickets')
+    plt.title('Tickets given in IC bars ' + startDate + ' to ' + endDate + ' from ' + begin + ' to ' + end) #still need to use get date fct. and take 2 months off to display dates
 
-dcVal = combiningNamesAgain('124 S DUBUQUE ST')
+    plt.show()
 
-martinisVal = combiningNamesAgain('127 E COLLEGE ST') + combiningNamesAgain('127E COLLEGE ST')
-
-unionVal = combiningNamesAgain('121 E COLLEGE ST') + combiningNamesAgain('121 E COLLEGE') + combiningNamesAgain('125 S DUBUQUE ST')
-
-edenVal = combiningNamesAgain('12 S DUBUQUE ST')
-
-fieldValue = combiningNamesAgain("FIELD")
-
-airlinerVal = combiningNamesAgain("AIRLINER")
-
-spocoVal = combiningNamesAgain("SPORT")
-
-bojamesVal = combiningNamesAgain("BO") + combiningNamesAgain("118 E WASHINGT")
-
-
-barDictionary["FIELDHOUSE"] = fieldValue
-barDictionary["SUMMIT"] = summitVal
-barDictionary["AIRLINER"] = airlinerVal
-barDictionary["SPOCO"] = spocoVal
-barDictionary["UNION"] = unionVal
-barDictionary["BO JAMES"] = bojamesVal
-barDictionary["EDEN"] = edenVal
-barDictionary["MARTINIS"] = martinisVal
-barDictionary["DC'S"] = dcVal
-'''
 
