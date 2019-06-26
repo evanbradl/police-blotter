@@ -7,10 +7,7 @@ import matplotlib.pyplot as plt
 import xlrd
 from datetime import datetime
 from datetime import timedelta
-import json
-from urllib.parse import quote_plus
-from urllib.request import urlopen
-import gmaps
+
 
 
 #Function returns info from iowa city arrest blotter of past 2 months in string from HTML table format
@@ -104,11 +101,11 @@ def barNameCondensor(barDict):
 
     bluemooseVal = combiningNames("BLUE", barDict) + combiningNames("211 IO", barDict)
 
-    barDict["FIELDHOUSE BAR"] = fieldValue
+    barDict["FIELDHOUSE"] = fieldValue
     barDict["SUMMIT"] = summitVal
     barDict["AIRLINER"] = airlinerVal
     barDict["SPOCO"] = spocoVal
-    barDict["UNION BAR"] = unionVal
+    barDict["UNION"] = unionVal
     barDict["BO JAMES"] = bojamesVal
     barDict["EDEN"] = edenVal
     barDict["MARTINIS"] = martinisVal
@@ -179,19 +176,12 @@ def graphWebData():
     plt.title('Tickets given in IC bars past 2 months') #still need to use get date fct. and take 2 months off to display dates
 
     plt.show()
-'''   
-#updates excel doc with items pulled from police blotter website
-def updateExcel():
-    #document started with dates from
-    largestDate = datetime.strptime('5/6/2019', "%m/%d/%Y")
-'''
+
 
 #function returns dictionary from barproject.xls in form key = bar name, value = count of tickets
 def barDictFromExcel():
     workbook = xlrd.open_workbook('barproject.xls')
     worksheet = workbook.sheet_by_name('Sheet1')
-   # largestDate = datetime.strptime('5/6/2019', "%m/%d/%Y")
-   # currentDate = (datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndex, 0).value, workbook.datemode)))
     barDict2 = {}
     rowIndex = 2
     columnIndex = 4
@@ -489,72 +479,3 @@ def graphDataFromDateandTime(startDate, endDate, begin, end):
     plt.title('Tickets given in IC bars ' + startDate + ' to ' + endDate + ' from ' + begin + ' to ' + end) #still need to use get date fct. and take 2 months off to display dates
 
     plt.show()
-
-def geocodeAddress(addressString):
-   urlbase = "https://maps.googleapis.com/maps/api/geocode/json?address="
-   geoURL = urlbase + quote_plus(addressString)
-   geoURL = geoURL + "&key=" + "AIzaSyBXqIG1nWHyk3Se73pC2p5ElF9KhHmqB7Y"
-
-   ctx = ssl.create_default_context()
-   ctx.check_hostname = False
-   ctx.verify_mode = ssl.CERT_NONE
-   
-   stringResultFromGoogle = urlopen(geoURL, context=ctx).read().decode('utf8')
-   jsonResult = json.loads(stringResultFromGoogle)
-   if (jsonResult['status'] != "OK"):
-      print("Status returned from Google geocoder *not* OK: {}".format(jsonResult['status']))
-      return (0.0, 0.0) # this prevents crash in retrieveMapFromGoogle - yields maps with lat/lon center at 0.0, 0.0
-   loc = jsonResult['results'][0]['geometry']['location']
-   return (float(loc['lat']),float(loc['lng']))
-
-def geocodeBusinessName(nameString):
-   urlbase = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input="
-   #https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=union%20bar&inputtype=textquery&fields=photos,formatted_address,name,opening_hours,rating&locationbias=circle:20@41.6611,-88.4698&key=AIzaSyBXqIG1nWHyk3Se73pC2p5ElF9KhHmqB7Y
-   formattedName = quote_plus(nameString)
-   fields = "&fields=formatted_address"
-   key = "&key=" + "AIzaSyBXqIG1nWHyk3Se73pC2p5ElF9KhHmqB7Y"
-   inputType = "&inputtype=textquery"
-   iowaCityBias = "&locationbias=circle:10000@41.6611,-88.4698"
-   url = urlbase + formattedName + inputType + fields + iowaCityBias + key
-
-   ctx = ssl.create_default_context()
-   ctx.check_hostname = False
-   ctx.verify_mode = ssl.CERT_NONE
-   
-   stringResultFromGoogle = urlopen(url, context=ctx).read().decode('utf8')
-   jsonResult = json.loads(stringResultFromGoogle)
-   if (jsonResult['status'] != "OK"):
-      return (0.0, 0.0) # this prevents crash in retrieveMapFromGoogle - yields maps with lat/lon center at 0.0, 0.0
-   loc = jsonResult['candidates'][0]['formatted_address']
-   #print (loc)
-   return geocodeAddress(loc)#(float(loc['lat']),float(loc['lng']))
-
-def createLatLngList(barDict):
-    barDict = barNameCondensor(barDict)
-    barList, valList = toList(barDict)
-    returnList = []
-    count = 0
-    numLoops = 0
-    for item in barList:
-        numLoops = valList[count]
-        index = 0
-        while numLoops >= index:
-            search = item + ' iowa city'
-            #print(search)
-            returnList.append(geocodeBusinessName(search))
-            index += 1
-        count += 1
-    return returnList
-
-
-def createHeatMap(locations):
-    fig = gmaps.figure()
-    fig.add_layer(gmaps.heatmap_layer(locations))
-    fig
-        
-def heatMapFromDateTime(startDate, endDate, begin, end):
-    barDict = createDictFromDateandTime(startDate, endDate, begin, end)
-    locations = createLatLngList(barDict)
-    createHeatMap(locations)
-    
- 
