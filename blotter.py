@@ -493,7 +493,7 @@ def graphDataFromDateandTime(startDate, endDate, begin, end):
 def geocodeAddress(addressString):
    urlbase = "https://maps.googleapis.com/maps/api/geocode/json?address="
    geoURL = urlbase + quote_plus(addressString)
-   geoURL = geoURL + "&key=" + "AIzaSyBXqIG1nWHyk3Se73pC2p5ElF9KhHmqB7Y"
+   geoURL = geoURL + "&key=" + #APIKEY
 
    ctx = ssl.create_default_context()
    ctx.check_hostname = False
@@ -512,7 +512,7 @@ def geocodeBusinessName(nameString):
    #https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=union%20bar&inputtype=textquery&fields=photos,formatted_address,name,opening_hours,rating&locationbias=circle:20@41.6611,-88.4698&key=AIzaSyBXqIG1nWHyk3Se73pC2p5ElF9KhHmqB7Y
    formattedName = quote_plus(nameString)
    fields = "&fields=formatted_address"
-   key = "&key=" + "AIzaSyBXqIG1nWHyk3Se73pC2p5ElF9KhHmqB7Y"
+   key = "&key=" + #APIKEY
    inputType = "&inputtype=textquery"
    iowaCityBias = "&locationbias=circle:10000@41.6611,-88.4698"
    url = urlbase + formattedName + inputType + fields + iowaCityBias + key
