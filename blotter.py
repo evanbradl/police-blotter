@@ -5,12 +5,16 @@ import matplotlib.pyplot as plt; plt.rcdefaults()
 import numpy as np
 import matplotlib.pyplot as plt
 import xlrd
+from xlwt import Workbook    
 from datetime import datetime
 from datetime import timedelta
 import json
 from urllib.parse import quote_plus
 from urllib.request import urlopen
 import gmaps
+import requests
+from bs4 import BeautifulSoup
+import os
 
 
 #Function returns info from iowa city arrest blotter of past 2 months in string from HTML table format
@@ -29,6 +33,35 @@ def getWebPage(url="http://www.iowa-city.org/IcgovApps/Police/ArrestBlotter"):
     requestResult.close()
     return pageOfResults
 
+def getDfFromBlotter(url="http://www.iowa-city.org/IcgovApps/Police/ArrestBlotter"):
+        
+    page = requests.get(url)
+    sp = BeautifulSoup(page.content, 'lxml')
+    tb = sp.find_all('table')[0] 
+    df = pd.read_html(str(tb),encoding='utf-8', header=0)[0]
+    df['href'] = [np.where(tag.has_attr('href'),tag.get('href'),"no link") for tag in tb.find_all('a')]
+    return df
+
+def getBirthDate(href):
+    url = "https://www.iowa-city.org" + href
+    page = requests.get(url)
+    sp = BeautifulSoup(page.content, 'lxml')
+    tb = sp.find(class_='inline')
+    fieldList = []
+    valueList = []
+    for link in tb.find_all('dt'):
+        fieldList.append(link.text)
+    for link in tb.find_all('dd'):
+        valueList.append(link.text)
+    indexDOB = fieldList.index('DOB')
+    birthDate = datetime.strptime(valueList[indexDOB], "%m/%d/%Y")
+    return(birthDate)
+        #if(link.text == "DOB"):
+            #print(link)
+            #print(tb.dd)
+        #count += 1
+    #print(tb)
+    
 #Function returns dictionary in form key = bar name, value = count of tickets
 def createUnderageDictWeb():
     words = getWebPage()
@@ -180,25 +213,128 @@ def graphWebData():
 
     plt.show()
   
-#updates excel doc with items pulled from police blotter website
-def updateExcel():
-    #document included dates to may 6th 2019 on start
+def createNewWorkbook():
     workbook = xlrd.open_workbook('barproject.xls')
     worksheet = workbook.sheet_by_name('Sheet1')
     
-    rowIndex = 2
-    largestDate = datetime.strptime('5/6/2019', "%m/%d/%Y")
-    print(largestDate)
+    #new workbook is created
+    wb = Workbook() 
+    sheet1 = wb.add_sheet('Sheet 1')
+    
+    rowIndex = 0
+    
     while(not(worksheet.cell(rowIndex, 0).value == 1)):
-        currentDate = (datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndex, 0).value, workbook.datemode)))
-        print(currentDate)
-        if(currentDate > largestDate):
-            largestDate == currentDate
+        date = worksheet.cell(rowIndex, 0).value
+        sheet1.write(rowIndex, 0, date) 
+        
+        name = worksheet.cell(rowIndex, 1).value
+        sheet1.write(rowIndex, 1, name) 
+        
+        dob = worksheet.cell(rowIndex, 2).value
+        sheet1.write(rowIndex, 2, dob)
+        
+        location = worksheet.cell(rowIndex, 3).value
+        sheet1.write(rowIndex, 3, location)
+        
+        charge = worksheet.cell(rowIndex, 4).value
+        sheet1.write(rowIndex, 4, charge)
+        
+    
         rowIndex += 1
+    sheet1.write(rowIndex, 0, 1)
+    return sheet1
+
+
+#updates excel doc with items pulled from police blotter website
+def updateExcel():
+    #document included dates to may 6th 2019 on start
+
+    workbook = xlrd.open_workbook('barproject.xls')
+    worksheet = workbook.sheet_by_name('Sheet1')
+    
+    #new workbook is created
+    wb = Workbook() 
+    sheet1 = wb.add_sheet('Sheet1')
+    
+    rowIndex = 0
+    
+    while(not(worksheet.cell(rowIndex, 0).value == 1)):
+        date = worksheet.cell(rowIndex, 0).value
+        sheet1.write(rowIndex, 0, date) 
+        
+        name = worksheet.cell(rowIndex, 1).value
+        sheet1.write(rowIndex, 1, name) 
+        
+        dob = worksheet.cell(rowIndex, 2).value
+        sheet1.write(rowIndex, 2, dob)
+        
+        location = worksheet.cell(rowIndex, 3).value
+        sheet1.write(rowIndex, 3, location)
+        
+        charge = worksheet.cell(rowIndex, 4).value
+        sheet1.write(rowIndex, 4, charge)
+        
+    
+        rowIndex += 1
+       
+    
+    rowIndexSearch = 2
+    largestDate = datetime.strptime('5/6/2019', "%m/%d/%Y")
+    #print(largestDate)
+    while(not(worksheet.cell(rowIndexSearch, 0).value == 1)):
+        currentDate = (datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndexSearch, 0).value, workbook.datemode)))
+        #print(worksheet.cell(rowIndex, 0))
+        if(currentDate > largestDate):
+            largestDate = currentDate
+            
+        rowIndexSearch += 1
+        
+    df = getDfFromBlotter()
+
+    #df['href'] = [np.where(tag.has_attr('href'),tag.get('href'),"no link") for tag in words.find_all('a')]
+
+    #print(df)
+
+
+    length = len(df.loc[:,'Charges'])
+    j = 0
+    
+    while(j < length):
+        currentDate = datetime.strptime((df.loc[j,'Offense Date']),"%m/%d/%Y %H:%M:%S %p")
+        if currentDate > largestDate:
+            dateToWrite = excel_date(currentDate)
+            sheet1.write(rowIndex, 0, dateToWrite)
+            
+            offenderName = df.loc[j,'Name']
+            sheet1.write(rowIndex, 1, offenderName)
+            
+            location = df.loc[j,'Location']
+            sheet1.write(rowIndex, 3, location)
+            
+            charge = df.loc[j,'Charges']
+            sheet1.write(rowIndex, 4, charge)
+            
+            #print(str(df.loc[j,'href']))
+            birthdate = getBirthDate(str(df.loc[j,'href']))
+            #print(type(df.loc[j,'href']))
+
+            excelBirthdate = excel_date(birthdate)
+            sheet1.write(rowIndex, 2, excelBirthdate)
+            rowIndex += 1
+            
+        j = j + 1
+    sheet1.write(rowIndex, 0 , 1)
+    
     print(largestDate)
+    os.remove('barproject.xls')
+    wb.save('barproject.xls')
         
     #datetime.strptime((df.loc[j,'Offense Date']),"%m/%d/%Y %H:%M:%S %p")
 
+def excel_date(date1):
+    temp = datetime(1899, 12, 30)    # Note, not 31st Dec but 30th!
+    delta = date1 - temp
+    return float(delta.days) + (float(delta.seconds) / 86400)
 
 #function returns dictionary from barproject.xls in form key = bar name, value = count of tickets
 def barDictFromExcel():
