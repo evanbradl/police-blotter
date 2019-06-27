@@ -179,12 +179,26 @@ def graphWebData():
     plt.title('Tickets given in IC bars past 2 months') #still need to use get date fct. and take 2 months off to display dates
 
     plt.show()
-'''   
+  
 #updates excel doc with items pulled from police blotter website
 def updateExcel():
-    #document started with dates from
+    #document included dates to may 6th 2019 on start
+    workbook = xlrd.open_workbook('barproject.xls')
+    worksheet = workbook.sheet_by_name('Sheet1')
+    
+    rowIndex = 2
     largestDate = datetime.strptime('5/6/2019', "%m/%d/%Y")
-'''
+    print(largestDate)
+    while(not(worksheet.cell(rowIndex, 0).value == 1)):
+        currentDate = (datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndex, 0).value, workbook.datemode)))
+        print(currentDate)
+        if(currentDate > largestDate):
+            largestDate == currentDate
+        rowIndex += 1
+    print(largestDate)
+        
+    #datetime.strptime((df.loc[j,'Offense Date']),"%m/%d/%Y %H:%M:%S %p")
+
 
 #function returns dictionary from barproject.xls in form key = bar name, value = count of tickets
 def barDictFromExcel():
@@ -493,7 +507,7 @@ def graphDataFromDateandTime(startDate, endDate, begin, end):
 def geocodeAddress(addressString):
    urlbase = "https://maps.googleapis.com/maps/api/geocode/json?address="
    geoURL = urlbase + quote_plus(addressString)
-   geoURL = geoURL + "&key=" + #APIKEY
+   geoURL = geoURL + "&key=" + 'APIKEY'
 
    ctx = ssl.create_default_context()
    ctx.check_hostname = False
@@ -512,7 +526,7 @@ def geocodeBusinessName(nameString):
    #https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=union%20bar&inputtype=textquery&fields=photos,formatted_address,name,opening_hours,rating&locationbias=circle:20@41.6611,-88.4698&key=AIzaSyBXqIG1nWHyk3Se73pC2p5ElF9KhHmqB7Y
    formattedName = quote_plus(nameString)
    fields = "&fields=formatted_address"
-   key = "&key=" + #APIKEY
+   key = "&key=" + 'APIKEY'
    inputType = "&inputtype=textquery"
    iowaCityBias = "&locationbias=circle:10000@41.6611,-88.4698"
    url = urlbase + formattedName + inputType + fields + iowaCityBias + key
