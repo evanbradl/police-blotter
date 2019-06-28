@@ -622,6 +622,7 @@ def heatMapFromDateTime(startDate='jan 1 2014',endDate='jun 28 2050',begin='10:0
     createHeatMap(locations)
     
  
-def createTwoGraphs(startDate='jan 1 2014',endDate='jun 28 2050'):
+def createThreeGraphs(startDate='jan 1 2014',endDate='jun 28 2050'):
     graphDataFromDateandTime(startDate,endDate)
     graphUnderageTimeIntervals(startDate,endDate)
+    graphUnderageByDayWeek(startDate,endDate)
