@@ -42,7 +42,7 @@ def getDfFromBlotter(url="http://www.iowa-city.org/IcgovApps/Police/ArrestBlotte
     df['href'] = [np.where(tag.has_attr('href'),tag.get('href'),"no link") for tag in tb.find_all('a')]
     return df
 
-def getBirthDate(href):
+def getBirthDateandOfficer(href):
     url = "https://www.iowa-city.org" + href
     page = requests.get(url)
     sp = BeautifulSoup(page.content, 'lxml')
@@ -55,7 +55,10 @@ def getBirthDate(href):
         valueList.append(link.text)
     indexDOB = fieldList.index('DOB')
     birthDate = datetime.strptime(valueList[indexDOB], "%m/%d/%Y")
-    return(birthDate)
+    
+    indexOfficer = fieldList.index('Officer')
+    officer = str(valueList[indexOfficer])
+    return(birthDate, officer)
         #if(link.text == "DOB"):
             #print(link)
             #print(tb.dd)
@@ -213,36 +216,6 @@ def graphWebData():
 
     plt.show()
   
-def createNewWorkbook():
-    workbook = xlrd.open_workbook('barproject.xls')
-    worksheet = workbook.sheet_by_name('Sheet1')
-    
-    #new workbook is created
-    wb = Workbook() 
-    sheet1 = wb.add_sheet('Sheet 1')
-    
-    rowIndex = 0
-    
-    while(not(worksheet.cell(rowIndex, 0).value == 1)):
-        date = worksheet.cell(rowIndex, 0).value
-        sheet1.write(rowIndex, 0, date) 
-        
-        name = worksheet.cell(rowIndex, 1).value
-        sheet1.write(rowIndex, 1, name) 
-        
-        dob = worksheet.cell(rowIndex, 2).value
-        sheet1.write(rowIndex, 2, dob)
-        
-        location = worksheet.cell(rowIndex, 3).value
-        sheet1.write(rowIndex, 3, location)
-        
-        charge = worksheet.cell(rowIndex, 4).value
-        sheet1.write(rowIndex, 4, charge)
-        
-    
-        rowIndex += 1
-    sheet1.write(rowIndex, 0, 1)
-    return sheet1
 
 
 #updates excel doc with items pulled from police blotter website
@@ -315,12 +288,15 @@ def updateExcel():
             sheet1.write(rowIndex, 4, charge)
             
             #print(str(df.loc[j,'href']))
-            birthdate = getBirthDate(str(df.loc[j,'href']))
+            birthdate, officer = getBirthDateandOfficer(str(df.loc[j,'href']))
             #print(type(df.loc[j,'href']))
 
             excelBirthdate = excel_date(birthdate)
             sheet1.write(rowIndex, 2, excelBirthdate)
+            print(officer)
+            sheet1.write(rowIndex, 5, officer)
             rowIndex += 1
+            
             
         j = j + 1
     sheet1.write(rowIndex, 0 , 1)
