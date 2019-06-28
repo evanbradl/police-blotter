@@ -367,6 +367,50 @@ def graphExcelUnderageData():
     plt.show()
     
     
+def graphUnderageByDayWeek(startDate='jan 1 2014',endDate='jun 28 2050'):
+    workbook = xlrd.open_workbook('barproject.xls')
+    worksheet = workbook.sheet_by_name('Sheet1')
+    index = 0
+    keyList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    valueList = []
+    beginDate = datetime.strptime(startDate, '%b %d %Y')
+    finalDate = datetime.strptime(endDate, '%b %d %Y')
+    
+    for items in keyList:
+        Sum = 0
+        rowIndex = 2
+        columnIndex = 4
+        while(not(worksheet.cell(rowIndex, 0).value == 1)):
+            currentDate = (datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndex, 0).value, workbook.datemode)))
+            if currentDate >= beginDate and currentDate <= finalDate and currentDate.weekday() == index:
+                charge = worksheet.cell(rowIndex, columnIndex).value
+                if 'UNDER 21 IN BAR AFTER 10 PM' in charge or 'In a Bar After 10 pm While Underage' in charge:
+                    Sum += 1
+            rowIndex += 1
+        valueList.append(Sum)
+        index += 1
+    keyList.reverse()
+    valueList.reverse()
+    
+    y_pos = np.arange(len(keyList))
+
+    plt.barh(y_pos, valueList, align='center', alpha=0.5)
+    plt.yticks(y_pos, keyList)
+    plt.xlabel('Tickets')
+    enddatetime = datetime.strptime(endDate, '%b %d %Y')
+    largestDate = largestDateinDoc()
+    if(largestDate < enddatetime):
+        enddatetime = largestDate
+    endDate = enddatetime.strftime("%m/%d/%Y")
+    earliestPossible = datetime.strptime(startDate, '%b %d %Y')
+    start = datetime.strptime('jan 1 2014', '%b %d %Y')
+    if(start < earliestPossible):
+        start = earliestPossible
+    startDate = start.strftime("%m/%d/%Y")
+    plt.title('Tickets given in IC bars ' + startDate + ' to ' + endDate) #still need to use get date fct. and take 2 months off to display dates
+
+    plt.show()
+    
 def graphUnderageTimeIntervals(startDate='jan 1 2014',endDate='jun 28 2050'):
     workbook = xlrd.open_workbook('barproject.xls')
     worksheet = workbook.sheet_by_name('Sheet1')
@@ -572,7 +616,7 @@ def createHeatMap(locations):
     fig.add_layer(gmaps.heatmap_layer(locations))
     fig
         
-def heatMapFromDateTime(startDate, endDate, begin, end):
+def heatMapFromDateTime(startDate='jan 1 2014',endDate='jun 28 2050',begin='10:00 pm', end='3:00 am'):
     barDict = createDictFromDateandTime(startDate, endDate, begin, end)
     locations = createLatLngList(barDict)
     createHeatMap(locations)
