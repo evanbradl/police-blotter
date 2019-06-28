@@ -324,8 +324,7 @@ def excel_date(date1):
 def barDictFromExcel():
     workbook = xlrd.open_workbook('barproject.xls')
     worksheet = workbook.sheet_by_name('Sheet1')
-   # largestDate = datetime.strptime('5/6/2019', "%m/%d/%Y")
-   # currentDate = (datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndex, 0).value, workbook.datemode)))
+
     barDict2 = {}
     rowIndex = 2
     columnIndex = 4
@@ -367,9 +366,73 @@ def graphExcelUnderageData():
 
     plt.show()
     
+    
+def graphUnderageTimeIntervals(startDate='jan 1 2014',endDate='jun 28 2050'):
+    workbook = xlrd.open_workbook('barproject.xls')
+    worksheet = workbook.sheet_by_name('Sheet1')
+    keyList = []
+    valueList = []
+    counter = 0
+    
+    startDatetime = datetime.strptime(startDate, '%b %d %Y')
+    endDatetime = datetime.strptime(endDate, '%b %d %Y')
+    
+    startTime = datetime.strptime('10:00 pm', '%I:%M %p')
+    barClose = datetime.strptime('2:00 am', '%I:%M %p')
+    while startTime.time() != barClose.time():
+        lowerIntervalString = startTime.strftime("%I:%M:%S %p")
+        beginTime = startTime
+        startTime = startTime + timedelta(minutes = 15)
+        endTime = startTime
+        higherIntervalString = startTime.strftime("%I:%M:%S %p")
+        intervalString = lowerIntervalString + '-'+ higherIntervalString
+        
+        keyList.append(intervalString)
+        
+        rowIndex = 2
+        columnIndex = 4
+        
+        currentCount = 0
+        while(not(worksheet.cell(rowIndex, 0).value == 1)):
+            charge = worksheet.cell(rowIndex, columnIndex).value
+            if 'UNDER 21 IN BAR AFTER 10 PM' in charge or 'In a Bar After 10 pm While Underage' in charge:
+                currentDate = (datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndex, 0).value, workbook.datemode)))
+                if(beginTime.time() > endTime.time()):
+                    if (currentDate.time() >= beginTime.time() or currentDate.time() < endTime.time()) and (currentDate >= startDatetime and currentDate <= endDatetime):
+                        currentCount += 1
+                else:
+                    if (currentDate.time() >= beginTime.time() and currentDate.time() < endTime.time()) and (currentDate >= startDatetime and currentDate <= endDatetime):
+                        currentCount += 1
+        
+            rowIndex = rowIndex + 1
+        valueList.append(currentCount)
+        counter += 1
+    
 
     
-#creates dictionary of bar based on times and dates entered in string for ex. (10:05 PM, 1:00 AM, jun 5 2016, jul 6 2017) this is 10:05pm to midnight. data only exists from 10:00pm-5:00am
+    keyList.reverse()
+    valueList.reverse()
+    
+    y_pos = np.arange(len(keyList))
+
+    plt.barh(y_pos, valueList, align='center', alpha=0.5)
+    plt.yticks(y_pos, keyList)
+    plt.xlabel('Tickets')
+    enddatetime = datetime.strptime(endDate, '%b %d %Y')
+    largestDate = largestDateinDoc()
+    if(largestDate < enddatetime):
+        enddatetime = largestDate
+    endDate = enddatetime.strftime("%m/%d/%Y")
+    earliestPossible = datetime.strptime(startDate, '%b %d %Y')
+    start = datetime.strptime('jan 1 2014', '%b %d %Y')
+    if(start < earliestPossible):
+        start = earliestPossible
+    startDate = start.strftime("%m/%d/%Y")
+    plt.title('Tickets given in IC bars ' + startDate + ' to ' + endDate) #still need to use get date fct. and take 2 months off to display dates
+
+    plt.show()
+    
+#creates dictionary of bar based on times and dates entered in string for ex. (10:05 PM, 1:00 AM, jun 5 2016, jul 6 2017) this is 10:05pm to midnight. 
 def createDictFromDateandTime(startDate,endDate,begin,end):
     beginTime = datetime.strptime(begin, '%I:%M %p')
     endTime = datetime.strptime(end, '%I:%M %p')
@@ -382,14 +445,7 @@ def createDictFromDateandTime(startDate,endDate,begin,end):
 
     elif(beginDate < datetime.strptime("jan 1 2014", '%b %d %Y')):
         print("data only goes exists after 2014")
-    #beginTime = beginTime.time()
-    #endTime = endTime.time()
-    #tdelta = datetime.combine(date.today(), endTime) - datetime.combine(date.today(), beginTime)
 
-    
-    
-    #if is after 10 and before 2 greater than 10pm would go 10-11:59 and less than 2 am would go
-    # if it is after 1 and before 3 then 
     barDictionary = {}
     
     workbook = xlrd.open_workbook('barproject.xls')
@@ -402,23 +458,7 @@ def createDictFromDateandTime(startDate,endDate,begin,end):
         charge = worksheet.cell(rowIndex, columnIndex).value
         if 'UNDER 21 IN BAR AFTER 10 PM' in charge or 'In a Bar After 10 pm While Underage' in charge:
             currentDate = (datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndex, 0).value, workbook.datemode)))
-            #currentTime = currentDate.time()
-           # print(currentTime)
             
-           
-            
-            #str_time = currentDate.strftime('%I:%M %p')
-            #print(str_time)
-            #currentTime = datetime.strptime(str_time,'%I:%M %p')
-            #print(currentTime)
-            
-            #print("begin time:", beginTime)
-            #print("current date:", currentDate)
-            #print("delta:",currenttdelta)
-           # if currenttdelta.days != 0:
-            #    currenttdelta = timedelta(days=0, seconds=currenttdelta.seconds, microseconds=currenttdelta.microseconds)
-            #print("fixed delta:", currenttdelta)
-            #if(currenttdelta <= tdelta) and (currentDate >= beginDate and currentDate <= endDate):
             if(beginTime.time() > endTime.time()):
                 if (currentDate.time() >= beginTime.time() or currentDate.time() < endTime.time()) and (currentDate >= beginDate and currentDate <= endDate):
                     if worksheet.cell(rowIndex, columnIndex-1).value in barDictionary:
@@ -438,14 +478,14 @@ def createDictFromDateandTime(startDate,endDate,begin,end):
                    print("time not included: ",currentDate.time())
                                       
         rowIndex = rowIndex + 1
-    #print("excel done")
+    
     return barDictionary
     
 
 
     
 
-def graphDataFromDateandTime(startDate='jan 1 2014',endDate='jun 28 2050',begin='10:00 pm', end='11:00 pm'):
+def graphDataFromDateandTime(startDate='jan 1 2014',endDate='jun 28 2050',begin='10:00 pm', end='3:00 am'):
     barDictionary = createDictFromDateandTime(startDate, endDate, begin, end)
     condensedDict = barNameCondensor(barDictionary)
     
@@ -538,3 +578,6 @@ def heatMapFromDateTime(startDate, endDate, begin, end):
     createHeatMap(locations)
     
  
+def createTwoGraphs(startDate='jan 1 2014',endDate='jun 28 2050'):
+    graphDataFromDateandTime(startDate,endDate)
+    graphUnderageTimeIntervals(startDate,endDate)
