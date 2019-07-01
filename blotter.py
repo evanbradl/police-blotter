@@ -42,6 +42,21 @@ def getDfFromBlotter(url="http://www.iowa-city.org/IcgovApps/Police/ArrestBlotte
     df['href'] = [np.where(tag.has_attr('href'),tag.get('href'),"no link") for tag in tb.find_all('a')]
     return df
 
+def getDfFromActivity(url="https://www.iowa-city.org/IcgovApps/Police/ActivityLog?Length=11"):
+    page = requests.get(url)
+    sp = BeautifulSoup(page.content, 'lxml')
+    print(page.content)
+   # option_ = sp.find("table", {"style": "font-size:14px"}).findAll("option")
+    option = sp.find("selected",{"name":"activityDate"})
+    print(option)
+    
+    #print(option)
+    #print(option_)
+    tb = sp.find_all('table')[0]
+    df = pd.read_html(str(tb),encoding='utf-8', header=0)[0]
+    #print(df)
+    #print(df.loc[:,'Dispatch Number'])
+
 def getBirthDateandOfficer(href):
     url = "https://www.iowa-city.org" + href
     page = requests.get(url)
@@ -265,8 +280,26 @@ def updateExcel():
         charge = worksheet.cell(rowIndex, 4).value
         sheet1.write(rowIndex, 4, charge)
         
-    
+        officer = worksheet.cell(rowIndex, 5).value
+        sheet1.write(rowIndex, 5, officer)
+        
+        if rowIndex >= 6001 and rowIndex <= 7000:
+            if type(location) == str:
+                lat, long = geocodeBusinessName(location + ' iowa city')
+                sheet1.write(rowIndex, 6, lat)
+                sheet1.write(rowIndex, 7, long)
+            else:
+                sheet1.write(rowIndex, 6, 0)
+                sheet1.write(rowIndex, 7, 0)
+        else:
+            lat = worksheet.cell(rowIndex, 6).value
+            long = worksheet.cell(rowIndex, 7).value
+            sheet1.write(rowIndex, 6, lat)
+            sheet1.write(rowIndex, 7, long)
+        
+   
         rowIndex += 1
+        print(rowIndex)
        
     
 
@@ -303,6 +336,16 @@ def updateExcel():
             excelBirthdate = excel_date(birthdate)
             sheet1.write(rowIndex, 2, excelBirthdate)
             sheet1.write(rowIndex, 5, officer)
+            
+            print(location, ' ', rowIndex )
+            if type(location) == str:
+                lat, long = geocodeBusinessName(location + ' iowa city')
+                sheet1.write(rowIndex, 6, lat)
+                sheet1.write(rowIndex, 7, long)
+            else:
+                sheet1.write(rowIndex, 6, 0)
+                sheet1.write(rowIndex, 7, 0)
+            
             rowIndex += 1
             
             
@@ -366,7 +409,57 @@ def graphExcelUnderageData():
 
     plt.show()
     
+def graphTicketsGivenByOfficer(startDate='jan 1 2014',endDate='jun 28 2050'):
+    workbook = xlrd.open_workbook('barproject.xls')
+    worksheet = workbook.sheet_by_name('Sheet1')
     
+    keyList = []
+    valueList = []
+
+    beginDate = datetime.strptime(startDate, '%b %d %Y')
+    finalDate = datetime.strptime(endDate, '%b %d %Y')
+    
+    rowIndex = 2
+    columnIndex = 4
+        
+    
+    while(not(worksheet.cell(rowIndex, 0).value == 1)):
+        charge = worksheet.cell(rowIndex, columnIndex).value
+        if 'UNDER 21 IN BAR AFTER 10 PM' in charge or 'In a Bar After 10 pm While Underage' in charge:
+            currentDate = (datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndex, 0).value, workbook.datemode)))
+
+            if (currentDate >= beginDate and currentDate <= finalDate):
+                officer = charge = worksheet.cell(rowIndex, 5).value
+                officer = officer.upper()
+                if officer in keyList:
+                    index = keyList.index(officer)
+                    valueList[index] = valueList[index] + 1
+                else:
+                    keyList.append(officer)
+                    valueList.append(1)
+        rowIndex += 1
+    del valueList[0]
+    del keyList[0]
+
+    y_pos = np.arange(len(keyList))
+
+    plt.barh(y_pos, valueList, align='center', alpha=0.5)
+    plt.yticks(y_pos, keyList)
+    plt.xlabel('Tickets (data only available after 5/6/2019)')
+    finalDate = datetime.strptime(endDate, '%b %d %Y')
+    largestDate = largestDateinDoc()
+    if(largestDate < finalDate):
+        finalDate = largestDate
+    endDate = finalDate.strftime("%m/%d/%Y")
+    earliestPossible = datetime.strptime(startDate, '%b %d %Y')
+    start = datetime.strptime('may 6 2019', '%b %d %Y')
+    if(start < earliestPossible):
+        start = earliestPossible
+    startDate = start.strftime("%m/%d/%Y")
+    plt.title('Tickets given in IC bars ' + startDate + ' to ' + endDate) #still need to use get date fct. and take 2 months off to display dates
+
+    plt.show()
+
 def graphUnderageByDayWeek(startDate='jan 1 2014',endDate='jun 28 2050'):
     workbook = xlrd.open_workbook('barproject.xls')
     worksheet = workbook.sheet_by_name('Sheet1')
@@ -396,7 +489,7 @@ def graphUnderageByDayWeek(startDate='jan 1 2014',endDate='jun 28 2050'):
 
     plt.barh(y_pos, valueList, align='center', alpha=0.5)
     plt.yticks(y_pos, keyList)
-    plt.xlabel('Tickets')
+    plt.xlabel('Tickets'+ ' (days break at midnight so data is shitty)')
     enddatetime = datetime.strptime(endDate, '%b %d %Y')
     largestDate = largestDateinDoc()
     if(largestDate < enddatetime):
@@ -407,7 +500,7 @@ def graphUnderageByDayWeek(startDate='jan 1 2014',endDate='jun 28 2050'):
     if(start < earliestPossible):
         start = earliestPossible
     startDate = start.strftime("%m/%d/%Y")
-    plt.title('Tickets given in IC bars ' + startDate + ' to ' + endDate) #still need to use get date fct. and take 2 months off to display dates
+    plt.title('Tickets given in IC bars ' + startDate + ' to ' + endDate ) #still need to use get date fct. and take 2 months off to display dates
 
     plt.show()
     
@@ -557,7 +650,7 @@ def graphDataFromDateandTime(startDate='jan 1 2014',endDate='jun 28 2050',begin=
 def geocodeAddress(addressString):
    urlbase = "https://maps.googleapis.com/maps/api/geocode/json?address="
    geoURL = urlbase + quote_plus(addressString)
-   geoURL = geoURL + "&key=" + 'APIKEY'
+   geoURL = geoURL + "&key=" + 'AIzaSyC5f7Nxf_YcL5MD4LcWr3ebOZw2Kb3xVXQ'
 
    ctx = ssl.create_default_context()
    ctx.check_hostname = False
@@ -569,16 +662,16 @@ def geocodeAddress(addressString):
       print("Status returned from Google geocoder *not* OK: {}".format(jsonResult['status']))
       return (0.0, 0.0) # this prevents crash in retrieveMapFromGoogle - yields maps with lat/lon center at 0.0, 0.0
    loc = jsonResult['results'][0]['geometry']['location']
-   return (float(loc['lat']),float(loc['lng']))
+   return float(loc['lat']),float(loc['lng'])
 
 def geocodeBusinessName(nameString):
    urlbase = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input="
    #https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=union%20bar&inputtype=textquery&fields=photos,formatted_address,name,opening_hours,rating&locationbias=circle:20@41.6611,-88.4698&key=AIzaSyBXqIG1nWHyk3Se73pC2p5ElF9KhHmqB7Y
    formattedName = quote_plus(nameString)
    fields = "&fields=formatted_address"
-   key = "&key=" + 'APIKEY'
+   key = "&key=" + 'AIzaSyC5f7Nxf_YcL5MD4LcWr3ebOZw2Kb3xVXQ'
    inputType = "&inputtype=textquery"
-   iowaCityBias = "&locationbias=circle:10000@41.6611,-88.4698"
+   iowaCityBias = "&locationbias=circle:10000@41.6611,-91.5302"
    url = urlbase + formattedName + inputType + fields + iowaCityBias + key
 
    ctx = ssl.create_default_context()
@@ -594,7 +687,7 @@ def geocodeBusinessName(nameString):
    return geocodeAddress(loc)#(float(loc['lat']),float(loc['lng']))
 
 def createLatLngList(barDict):
-    barDict = barNameCondensor(barDict)
+    #barDict = barNameCondensor(barDict)
     barList, valList = toList(barDict)
     returnList = []
     count = 0
@@ -626,3 +719,51 @@ def createThreeGraphs(startDate='jan 1 2014',endDate='jun 28 2050'):
     graphDataFromDateandTime(startDate,endDate)
     graphUnderageTimeIntervals(startDate,endDate)
     graphUnderageByDayWeek(startDate,endDate)
+    
+    
+    #returns dictionary in form key= address value = count of arrests at address
+def createDictAllLocations(startDate, endDate, begin, end):
+    beginTime = datetime.strptime(begin, '%I:%M %p')
+    endTime = datetime.strptime(end, '%I:%M %p')
+    
+    beginDate = datetime.strptime(startDate, '%b %d %Y')
+    endDate = datetime.strptime(endDate, '%b %d %Y')
+    
+    if(beginDate > endDate):
+        print("Begin date was after end date")
+
+    elif(beginDate < datetime.strptime("jan 1 2014", '%b %d %Y')):
+        print("data only goes exists after 2014")
+
+    locationDictionary = {}
+    
+    workbook = xlrd.open_workbook('barproject.xls')
+    worksheet = workbook.sheet_by_name('Sheet1')
+
+    rowIndex = 2
+    columnIndex = 4
+    
+    while(not(worksheet.cell(rowIndex, 0).value == 1)):
+        
+        currentDate = (datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndex, 0).value, workbook.datemode)))
+        print("here")
+        if(beginTime.time() > endTime.time()):
+            if (currentDate.time() >= beginTime.time() or currentDate.time() < endTime.time()) and (currentDate >= beginDate and currentDate <= endDate):
+                if worksheet.cell(rowIndex, columnIndex-1).value in locationDictionary:
+                    locationDictionary[worksheet.cell(rowIndex, columnIndex-1).value] = locationDictionary[worksheet.cell(rowIndex, columnIndex-1).value] + 1
+                
+                else:
+                    locationDictionary[worksheet.cell(rowIndex, columnIndex-1).value] = 1
+               # print(currentTime)
+        else:
+            if (currentDate.time() >= beginTime.time() and currentDate.time() < endTime.time()) and (currentDate >= beginDate and currentDate <= endDate):
+                if worksheet.cell(rowIndex, columnIndex-1).value in locationDictionary:
+                    locationDictionary[worksheet.cell(rowIndex, columnIndex-1).value] = locationDictionary[worksheet.cell(rowIndex, columnIndex-1).value] + 1
+                
+                else:
+                    locationDictionary[worksheet.cell(rowIndex, columnIndex-1).value] = 1
+
+                                      
+        rowIndex += 1
+    
+    return locationDictionary
