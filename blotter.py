@@ -17,22 +17,9 @@ from bs4 import BeautifulSoup
 import os
 
 
-#Function returns info from iowa city arrest blotter of past 2 months in string from HTML table format
-def getWebPage(url="http://www.iowa-city.org/IcgovApps/Police/ArrestBlotter"):
 
-    global requestResult
-    global resultBytes
-    
-    context = ssl.create_default_context()
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
-    
-    requestResult = urllib.request.urlopen(url, context=context)
-    resultBytes = requestResult.read()
-    pageOfResults = resultBytes.decode('utf-8')
-    requestResult.close()
-    return pageOfResults
 
+#functions returns data from police blotter in df form
 def getDfFromBlotter(url="http://www.iowa-city.org/IcgovApps/Police/ArrestBlotter"):
         
     page = requests.get(url)
@@ -42,21 +29,8 @@ def getDfFromBlotter(url="http://www.iowa-city.org/IcgovApps/Police/ArrestBlotte
     df['href'] = [np.where(tag.has_attr('href'),tag.get('href'),"no link") for tag in tb.find_all('a')]
     return df
 
-def getDfFromActivity(url="https://www.iowa-city.org/IcgovApps/Police/ActivityLog?Length=11"):
-    page = requests.get(url)
-    sp = BeautifulSoup(page.content, 'lxml')
-    print(page.content)
-   # option_ = sp.find("table", {"style": "font-size:14px"}).findAll("option")
-    option = sp.find("selected",{"name":"activityDate"})
-    print(option)
-    
-    #print(option)
-    #print(option_)
-    tb = sp.find_all('table')[0]
-    df = pd.read_html(str(tb),encoding='utf-8', header=0)[0]
-    #print(df)
-    #print(df.loc[:,'Dispatch Number'])
 
+#returns birthdate of offender and officer that made arrest from police blotter, stored in href link from main police blotter page
 def getBirthDateandOfficer(href):
     url = "https://www.iowa-city.org" + href
     page = requests.get(url)
@@ -74,33 +48,8 @@ def getBirthDateandOfficer(href):
     indexOfficer = fieldList.index('Officer')
     officer = str(valueList[indexOfficer])
     return(birthDate, officer)
-        #if(link.text == "DOB"):
-            #print(link)
-            #print(tb.dd)
-        #count += 1
-    #print(tb)
-    
-#Function returns dictionary in form key = bar name, value = count of tickets
-def createUnderageDictWeb():
-    words = getWebPage()
+ 
 
-    dfs = pd.read_html(words)
-    df = dfs[0]
-
-    length = len(df.loc[:,'Charges'])
-
-    j = 0
-    count = 0
-    barDictionary = {}
-    while(j < length):
-        if "In a Bar After 10 pm While Underage" in df.loc[j,'Charges']:
-            count = count + 1
-            if df.loc[j,'Location'] in barDictionary:
-                barDictionary[df.loc[j,'Location']] = barDictionary[df.loc[j,'Location']] + 1
-            else:
-                barDictionary[df.loc[j,'Location']] = 1
-        j = j + 1
-    return barDictionary
 
 
 #function takes in string name, if string is included in key function will take delete from dict and return count
@@ -214,26 +163,6 @@ def toList(barDict):
     
     return keyList, valueList
 
-
-
-#puts data from web blotter into bar graph and prints to console
-def graphWebData():
-    
-    barDictionary = createUnderageDictWeb()
-    condensedDict = barNameCondensor(barDictionary)
-
-    #print(condensedDict)
-    
-    keyList, valueList = toList(condensedDict)
-
-    y_pos = np.arange(len(keyList))
-
-    plt.barh(y_pos, valueList, align='center', alpha=0.5)
-    plt.yticks(y_pos, keyList)
-    plt.xlabel('Tickets')
-    plt.title('Tickets given in IC bars past 2 months') #still need to use get date fct. and take 2 months off to display dates
-
-    plt.show()
   
 def largestDateinDoc():
     #document included dates to may 6th 2019 on start
@@ -341,6 +270,8 @@ def updateExcel():
         j = j + 1
     sheet1.write(rowIndex, 0 , 1)
     
+    largestDate = largestDateinDoc()
+    
     print("Document has been updated from",largestDate, "from web")
     os.remove('barproject.xls')
     wb.save('barproject.xls')
@@ -378,25 +309,6 @@ def barDictFromExcel():
     condensed = barNameCondensor(barDict2)
     return condensed
 
-
-def graphExcelUnderageData():
-    condensed = barDictFromExcel()
-    
-    keyList, valueList = toList(condensed)
-    Sum = 0
-    for item in valueList:
-        Sum += item
-    print(Sum)
-    y_pos = np.arange(len(keyList))
-
-    plt.barh(y_pos, valueList, align='center', alpha=0.5)
-    plt.yticks(y_pos, keyList)
-    plt.xlabel('Tickets')
-    largestDate = largestDateinDoc()
-    date_time = largestDate.strftime("%m/%d/%Y , %H:%M:%S %p")
-    plt.title('Tickets given in IC bars 1/1/14-'+date_time) #still need to use get date fct. and take 2 months off to display dates
-
-    plt.show()
     
 def graphTicketsGivenByOfficer(startDate='jan 1 2014',endDate='jun 28 2050'):
     workbook = xlrd.open_workbook('barproject.xls')
@@ -478,7 +390,7 @@ def graphUnderageByDayWeek(startDate='jan 1 2014',endDate='jun 28 2050'):
 
     plt.barh(y_pos, valueList, align='center', alpha=0.5)
     plt.yticks(y_pos, keyList)
-    plt.xlabel('Tickets'+ ' (days break at midnight so data is shitty)')
+    plt.xlabel('Tickets'+ ' (days break at midnight so data is skewed)')
     enddatetime = datetime.strptime(endDate, '%b %d %Y')
     largestDate = largestDateinDoc()
     if(largestDate < enddatetime):
@@ -675,22 +587,6 @@ def geocodeBusinessName(nameString):
    #print (loc)
    return geocodeAddress(loc)#(float(loc['lat']),float(loc['lng']))
 
-def createLatLngList(barDict):
-    #barDict = barNameCondensor(barDict)
-    barList, valList = toList(barDict)
-    returnList = []
-    count = 0
-    numLoops = 0
-    for item in barList:
-        numLoops = valList[count]
-        index = 0
-        while numLoops >= index:
-            search = item + ' iowa city'
-            #print(search)
-            returnList.append(geocodeBusinessName(search))
-            index += 1
-        count += 1
-    return returnList
 
 
 def createHeatMap(locations):
@@ -698,10 +594,7 @@ def createHeatMap(locations):
     fig.add_layer(gmaps.heatmap_layer(locations))
     fig
         
-def heatMapFromDateTime(startDate='jan 1 2014',endDate='jun 28 2050',begin='10:00 pm', end='3:00 am'):
-    barDict = createDictFromDateandTime(startDate, endDate, begin, end)
-    locations = createLatLngList(barDict)
-    createHeatMap(locations)
+
     
 def createHeatMapAll():
     gmaps.configure(api_key = "API key")
@@ -716,52 +609,7 @@ def createGraphs(startDate='jan 1 2014',endDate='jun 28 2050'):
     graphTicketsGivenByOfficer(startDate, endDate)
     
     
-    #returns dictionary in form key= address value = count of arrests at address
-def createDictAllLocations(startDate, endDate, begin, end):
-    beginTime = datetime.strptime(begin, '%I:%M %p')
-    endTime = datetime.strptime(end, '%I:%M %p')
-    
-    beginDate = datetime.strptime(startDate, '%b %d %Y')
-    endDate = datetime.strptime(endDate, '%b %d %Y')
-    
-    if(beginDate > endDate):
-        print("Begin date was after end date")
 
-    elif(beginDate < datetime.strptime("jan 1 2014", '%b %d %Y')):
-        print("data only goes exists after 2014")
-
-    locationDictionary = {}
-    
-    workbook = xlrd.open_workbook('barproject.xls')
-    worksheet = workbook.sheet_by_name('Sheet1')
-
-    rowIndex = 2
-    columnIndex = 4
-    
-    while(not(worksheet.cell(rowIndex, 0).value == 1)):
-        
-        currentDate = (datetime(*xlrd.xldate_as_tuple(worksheet.cell(rowIndex, 0).value, workbook.datemode)))
-        print("here")
-        if(beginTime.time() > endTime.time()):
-            if (currentDate.time() >= beginTime.time() or currentDate.time() < endTime.time()) and (currentDate >= beginDate and currentDate <= endDate):
-                if worksheet.cell(rowIndex, columnIndex-1).value in locationDictionary:
-                    locationDictionary[worksheet.cell(rowIndex, columnIndex-1).value] = locationDictionary[worksheet.cell(rowIndex, columnIndex-1).value] + 1
-                
-                else:
-                    locationDictionary[worksheet.cell(rowIndex, columnIndex-1).value] = 1
-               # print(currentTime)
-        else:
-            if (currentDate.time() >= beginTime.time() and currentDate.time() < endTime.time()) and (currentDate >= beginDate and currentDate <= endDate):
-                if worksheet.cell(rowIndex, columnIndex-1).value in locationDictionary:
-                    locationDictionary[worksheet.cell(rowIndex, columnIndex-1).value] = locationDictionary[worksheet.cell(rowIndex, columnIndex-1).value] + 1
-                
-                else:
-                    locationDictionary[worksheet.cell(rowIndex, columnIndex-1).value] = 1
-
-                                      
-        rowIndex += 1
-    
-    return locationDictionary
 
 def listOfLatLong():
     workbook = xlrd.open_workbook('barproject.xls')
@@ -782,3 +630,65 @@ def listOfLatLong():
         rowIndex += 1
     #print(largeLat, " ", smallLat, " ", largeLong, " ", smallLong)
     return latLong
+
+
+#!!! FOLLOWING FUNCTIONS ARE FOR GRAPHING LATEST 2 MONTHS OF POLICE ACTIVITY, NO EXCEL DOC IS NEEDED
+
+    
+    
+#Function returns info from iowa city arrest blotter of past 2 months in string from HTML table format
+def getWebPage(url="http://www.iowa-city.org/IcgovApps/Police/ArrestBlotter"):
+
+    global requestResult
+    global resultBytes
+    
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    
+    requestResult = urllib.request.urlopen(url, context=context)
+    resultBytes = requestResult.read()
+    pageOfResults = resultBytes.decode('utf-8')
+    requestResult.close()
+    return pageOfResults
+
+#Function returns dictionary in form key = bar name, value = count of tickets
+def createUnderageDictWeb():
+    words = getWebPage()
+
+    dfs = pd.read_html(words)
+    df = dfs[0]
+
+    length = len(df.loc[:,'Charges'])
+
+    j = 0
+    count = 0
+    barDictionary = {}
+    while(j < length):
+        if "In a Bar After 10 pm While Underage" in df.loc[j,'Charges']:
+            count = count + 1
+            if df.loc[j,'Location'] in barDictionary:
+                barDictionary[df.loc[j,'Location']] = barDictionary[df.loc[j,'Location']] + 1
+            else:
+                barDictionary[df.loc[j,'Location']] = 1
+        j = j + 1
+    return barDictionary
+
+#puts data from web blotter into bar graph and prints to console
+def graphWebData():
+    
+    barDictionary = createUnderageDictWeb()
+    condensedDict = barNameCondensor(barDictionary)
+
+    #print(condensedDict)
+    
+    keyList, valueList = toList(condensedDict)
+
+    y_pos = np.arange(len(keyList))
+
+    plt.barh(y_pos, valueList, align='center', alpha=0.5)
+    plt.yticks(y_pos, keyList)
+    plt.xlabel('Tickets')
+    plt.title('Tickets given in IC bars past 2 months') #still need to use get date fct. and take 2 months off to display dates
+
+    plt.show()
