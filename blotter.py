@@ -283,27 +283,16 @@ def updateExcel():
         officer = worksheet.cell(rowIndex, 5).value
         sheet1.write(rowIndex, 5, officer)
         
-        if rowIndex >= 6001 and rowIndex <= 7000:
-            if type(location) == str:
-                lat, long = geocodeBusinessName(location + ' iowa city')
-                sheet1.write(rowIndex, 6, lat)
-                sheet1.write(rowIndex, 7, long)
-            else:
-                sheet1.write(rowIndex, 6, 0)
-                sheet1.write(rowIndex, 7, 0)
-        else:
-            lat = worksheet.cell(rowIndex, 6).value
-            long = worksheet.cell(rowIndex, 7).value
-            sheet1.write(rowIndex, 6, lat)
-            sheet1.write(rowIndex, 7, long)
+        
+        lat = worksheet.cell(rowIndex, 6).value
+        long = worksheet.cell(rowIndex, 7).value
+        sheet1.write(rowIndex, 6, lat)
+        sheet1.write(rowIndex, 7, long)
         
    
         rowIndex += 1
-        print(rowIndex)
-       
-    
 
-        
+    
     df = getDfFromBlotter()
 
     #df['href'] = [np.where(tag.has_attr('href'),tag.get('href'),"no link") for tag in words.find_all('a')]
@@ -650,7 +639,7 @@ def graphDataFromDateandTime(startDate='jan 1 2014',endDate='jun 28 2050',begin=
 def geocodeAddress(addressString):
    urlbase = "https://maps.googleapis.com/maps/api/geocode/json?address="
    geoURL = urlbase + quote_plus(addressString)
-   geoURL = geoURL + "&key=" + 'AIzaSyC5f7Nxf_YcL5MD4LcWr3ebOZw2Kb3xVXQ'
+   geoURL = geoURL + "&key=" + 'API key'
 
    ctx = ssl.create_default_context()
    ctx.check_hostname = False
@@ -669,7 +658,7 @@ def geocodeBusinessName(nameString):
    #https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=union%20bar&inputtype=textquery&fields=photos,formatted_address,name,opening_hours,rating&locationbias=circle:20@41.6611,-88.4698&key=AIzaSyBXqIG1nWHyk3Se73pC2p5ElF9KhHmqB7Y
    formattedName = quote_plus(nameString)
    fields = "&fields=formatted_address"
-   key = "&key=" + 'AIzaSyC5f7Nxf_YcL5MD4LcWr3ebOZw2Kb3xVXQ'
+   key = "&key=" + 'API key'
    inputType = "&inputtype=textquery"
    iowaCityBias = "&locationbias=circle:10000@41.6611,-91.5302"
    url = urlbase + formattedName + inputType + fields + iowaCityBias + key
@@ -714,11 +703,17 @@ def heatMapFromDateTime(startDate='jan 1 2014',endDate='jun 28 2050',begin='10:0
     locations = createLatLngList(barDict)
     createHeatMap(locations)
     
+def createHeatMapAll():
+    gmaps.configure(api_key = "API key")
+    locations = listOfLatLong()
+    createHeatMap(locations)
+    
  
-def createThreeGraphs(startDate='jan 1 2014',endDate='jun 28 2050'):
+def createGraphs(startDate='jan 1 2014',endDate='jun 28 2050'):
     graphDataFromDateandTime(startDate,endDate)
     graphUnderageTimeIntervals(startDate,endDate)
     graphUnderageByDayWeek(startDate,endDate)
+    graphTicketsGivenByOfficer(startDate, endDate)
     
     
     #returns dictionary in form key= address value = count of arrests at address
@@ -767,3 +762,23 @@ def createDictAllLocations(startDate, endDate, begin, end):
         rowIndex += 1
     
     return locationDictionary
+
+def listOfLatLong():
+    workbook = xlrd.open_workbook('barproject.xls')
+    worksheet = workbook.sheet_by_name('Sheet1')
+    latLong = []
+
+    rowIndex = 2
+    while(not(worksheet.cell(rowIndex, 0).value == 1)):
+        lat = worksheet.cell(rowIndex, 6).value
+        long = worksheet.cell(rowIndex, 7).value
+        if (lat > 41.62 and lat < 41.68) and (long > -91.56 and long < -91.5):
+            
+            if not(lat == 0):
+                together = (lat, long)
+                latLong.append(together)
+          
+            
+        rowIndex += 1
+    #print(largeLat, " ", smallLat, " ", largeLong, " ", smallLong)
+    return latLong
