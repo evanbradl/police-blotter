@@ -1,7 +1,7 @@
 # police-blotter
 Project to track police activity in Iowa City with a focus on alcohol related arrests.
 This project takes data about arrests from the Iowa City arrests blotter and adds the info to a excel sheet originally recieved from the IC police department with info about alcohol realated arrests from 1/1/2014-5/6/2019.
-I have included a function to pull data from the blotter and add on to this info to keep it up to date and take the data from the excel document and graph it in a way that is easy to interpret. 
+I have included a function to pull data from the blotter and add on to this info to keep it up to date and take the data from the excel document and graph it in a way that is easy to interpret. Original excel doc is required for all graphing except functions dealing only with web.
 Included graphs track arrests made at bars with respect to time and date, arrests made by specific officers, and a heat map of arrests made in Iowa City using google maps api.
 Examples of graphs program can produce--
 ![what_bar](https://user-images.githubusercontent.com/45237737/60542577-4246f800-9ce2-11e9-8948-807c96a32f2d.png)
